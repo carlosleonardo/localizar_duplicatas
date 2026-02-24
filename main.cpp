@@ -63,13 +63,13 @@ std::unordered_map<std::string, std::vector<std::filesystem::path> > obter_arqui
 }
 
 void exibir_duplicados(const std::unordered_map<std::string, std::vector<std::filesystem::path> > &arquivos) {
+    bool encontrouDuplicados = false;
     for (const auto &[nomeArquivo, caminhos]: arquivos) {
         if (caminhos.size() > 1) {
             // Verifica se o conteúdo dos arquivos é o mesmo usando hash
             std::unordered_map<std::string, std::vector<std::filesystem::path> > hashes;
             for (const auto &caminho: caminhos) {
-                std::string hash = calcularHash(caminho);
-                if (!hash.empty()) {
+                if (std::string hash = calcularHash(caminho); !hash.empty()) {
                     hashes[hash].push_back(caminho);
                 }
             }
@@ -80,9 +80,13 @@ void exibir_duplicados(const std::unordered_map<std::string, std::vector<std::fi
                     for (const auto &caminho: caminhosHash) {
                         std::cout << " - " << caminho.string() << std::endl;
                     }
+                    encontrouDuplicados = true;
                 }
             }
         }
+    }
+    if (!encontrouDuplicados) {
+        std::cout << "Nenhum arquivo duplicado encontrado." << std::endl;
     }
 }
 
