@@ -48,7 +48,8 @@ std::string calcularHash(const std::filesystem::path &caminho) {
     }
 }
 
-std::unordered_map<std::string, std::vector<std::filesystem::path> > obter_arquivos_duplicados(std::string pastaRaiz) {
+std::unordered_map<std::string, std::vector<std::filesystem::path> > obter_arquivos_duplicados(
+    const std::string &pastaRaiz) {
     std::unordered_map<std::string, std::vector<std::filesystem::path> > arquivos;
     // Percorre recursivamente o diretório raiz
     for (const auto &entrada: std::filesystem::recursive_directory_iterator(
@@ -61,7 +62,7 @@ std::unordered_map<std::string, std::vector<std::filesystem::path> > obter_arqui
     return arquivos;
 }
 
-void exibir_duplicados(std::unordered_map<std::string, std::vector<std::filesystem::path> > arquivos) {
+void exibir_duplicados(const std::unordered_map<std::string, std::vector<std::filesystem::path> > &arquivos) {
     for (const auto &[nomeArquivo, caminhos]: arquivos) {
         if (caminhos.size() > 1) {
             // Verifica se o conteúdo dos arquivos é o mesmo usando hash
@@ -86,6 +87,7 @@ void exibir_duplicados(std::unordered_map<std::string, std::vector<std::filesyst
 }
 
 int main() {
+    setlocale(LC_ALL, ".UTF-8");
     std::cout << "Localizar duplicatas!" << std::endl;
     std::cout << "Informe pasta raiz: ";
     std::string pastaRaiz;
