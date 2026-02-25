@@ -15,8 +15,6 @@
 #include <cryptopp/sha.h>
 #include <cryptopp/hex.h>
 
-static size_t tamanhoTotal = 0;
-
 std::string calcularHash(const std::filesystem::path& caminho)
 {
     try
@@ -74,9 +72,12 @@ std::unordered_map<std::string, std::vector<std::filesystem::path>> obter_arquiv
     return arquivos;
 }
 
-void exibir_duplicados(const std::unordered_map<std::string, std::vector<std::filesystem::path>>& arquivos)
+std::pair<size_t, size_t> exibir_duplicados(
+    const std::unordered_map<std::string, std::vector<std::filesystem::path>>& arquivos)
 {
     bool encontrouDuplicados = false;
+    size_t tamanhoTotalEmBytes = 0;
+    int totalDuplicatas = 0;
     for (const auto& [nomeArquivo, caminhos] : arquivos)
     {
         if (caminhos.size() > 1)
@@ -99,9 +100,10 @@ void exibir_duplicados(const std::unordered_map<std::string, std::vector<std::fi
                     for (const auto& caminho : caminhosHash)
                     {
                         std::cout << " - " << caminho.string() << std::endl;
+                        tamanhoTotalEmBytes += std::filesystem::file_size(caminho);
+                        totalDuplicatas++;
                     }
                     encontrouDuplicados = true;
-                    tamanhoTotal += std::filesystem::file_size(caminhosHash[0]);
                 }
             }
         }
@@ -110,6 +112,7 @@ void exibir_duplicados(const std::unordered_map<std::string, std::vector<std::fi
     {
         std::cout << "Nenhum arquivo duplicado encontrado." << std::endl;
     }
+    return {tamanhoTotalEmBytes, totalDuplicatas};
 }
 
 int main()
@@ -128,7 +131,9 @@ int main()
     std::unordered_map<std::string, std::vector<std::filesystem::path>> arquivos =
         obter_arquivos_duplicados(pastaRaiz);
     // Verifica os arquivos duplicados
-    exibir_duplicados(arquivos);
-    std::cout << "Tamanho que pode ser liberado: " << tamanhoTotal / 2 << " bytes" << std::endl;
+    const auto [tamanhoBytes, total] = exibir_duplicados(arquivos);
+    const auto tamanhoArquivo = tamanhoBytes / total;
+    // Considerando que cada arquivo duplicado tem um original e um duplicado
+    std::cout << "Tamanho em bytes que pode ser liberado: " << tamanhoBytes - tamanhoArquivo << " bytes" << std::endl;
     return 0;
 }
