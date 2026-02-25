@@ -15,27 +15,22 @@
 #include <cryptopp/sha.h>
 #include <cryptopp/hex.h>
 
-std::string calcularHash(const std::filesystem::path& caminho)
-{
-    try
-    {
+std::string calcularHash(const std::filesystem::path &caminho) {
+    try {
         CryptoPP::SHA256 hash;
         std::ifstream arquivo(caminho, std::ios::binary);
-        if (!arquivo.is_open())
-        {
+        if (!arquivo.is_open()) {
             std::cerr << "Não foi possível abrir o arquivo " << caminho.string() << " para leitura." << std::endl;
             return "";
         }
         constexpr size_t bufferSize = 8192;
         char buffer[bufferSize];
-        while (arquivo.read(buffer, bufferSize))
-        {
-            hash.Update(reinterpret_cast<const unsigned char*>(buffer), arquivo.gcount());
+        while (arquivo.read(buffer, bufferSize)) {
+            hash.Update(reinterpret_cast<const unsigned char *>(buffer), arquivo.gcount());
         }
         // Processa os bytes restantes
-        if (arquivo.gcount() > 0)
-        {
-            hash.Update(reinterpret_cast<const unsigned char*>(buffer), arquivo.gcount());
+        if (arquivo.gcount() > 0) {
+            hash.Update(reinterpret_cast<const unsigned char *>(buffer), arquivo.gcount());
         }
         arquivo.close();
         // Finaliza o cálculo do hash
@@ -47,24 +42,19 @@ std::string calcularHash(const std::filesystem::path& caminho)
         encoder.Put(digest, sizeof(digest));
         encoder.MessageEnd();
         return hashHex;
-    }
-    catch (const std::exception& e)
-    {
+    } catch (const std::exception &e) {
         std::cerr << "Erro ao calcular o hash do arquivo " << caminho.string() << ": " << e.what() << std::endl;
         return "";
     }
 }
 
-std::unordered_map<std::string, std::vector<std::filesystem::path>> obter_arquivos_duplicados(
-    const std::string& pastaRaiz)
-{
-    std::unordered_map<std::string, std::vector<std::filesystem::path>> arquivos;
+std::unordered_map<std::string, std::vector<std::filesystem::path> > obter_arquivos_duplicados(
+    const std::string &pastaRaiz) {
+    std::unordered_map<std::string, std::vector<std::filesystem::path> > arquivos;
     // Percorre recursivamente o diretório raiz
-    for (const auto& entrada : std::filesystem::recursive_directory_iterator(
-             pastaRaiz, std::filesystem::directory_options::skip_permission_denied))
-    {
-        if (entrada.is_regular_file())
-        {
+    for (const auto &entrada: std::filesystem::recursive_directory_iterator(
+             pastaRaiz, std::filesystem::directory_options::skip_permission_denied)) {
+        if (entrada.is_regular_file()) {
             std::string nomeArquivo = entrada.path().filename().string();
             arquivos[nomeArquivo].push_back(entrada.path());
         }
@@ -73,32 +63,24 @@ std::unordered_map<std::string, std::vector<std::filesystem::path>> obter_arquiv
 }
 
 std::pair<size_t, size_t> exibir_duplicados(
-    const std::unordered_map<std::string, std::vector<std::filesystem::path>>& arquivos)
-{
+    const std::unordered_map<std::string, std::vector<std::filesystem::path> > &arquivos) {
     bool encontrouDuplicados = false;
     size_t tamanhoTotalEmBytes = 0;
     int totalDuplicatas = 0;
-    for (const auto& [nomeArquivo, caminhos] : arquivos)
-    {
-        if (caminhos.size() > 1)
-        {
+    for (const auto &[nomeArquivo, caminhos]: arquivos) {
+        if (caminhos.size() > 1) {
             // Verifica se o conteúdo dos arquivos é o mesmo usando hash
-            std::unordered_map<std::string, std::vector<std::filesystem::path>> hashes;
-            for (const auto& caminho : caminhos)
-            {
-                if (std::string hash = calcularHash(caminho); !hash.empty())
-                {
+            std::unordered_map<std::string, std::vector<std::filesystem::path> > hashes;
+            for (const auto &caminho: caminhos) {
+                if (std::string hash = calcularHash(caminho); !hash.empty()) {
                     hashes[hash].push_back(caminho);
                 }
             }
             // Imprime os arquivos duplicados
-            for (const auto& caminhosHash : hashes | std::views::values)
-            {
-                if (caminhosHash.size() > 1)
-                {
+            for (const auto &caminhosHash: hashes | std::views::values) {
+                if (caminhosHash.size() > 1) {
                     std::cout << "Arquivos duplicados encontrados para o nome: " << nomeArquivo << std::endl;
-                    for (const auto& caminho : caminhosHash)
-                    {
+                    for (const auto &caminho: caminhosHash) {
                         std::cout << " - " << caminho.string() << std::endl;
                         tamanhoTotalEmBytes += std::filesystem::file_size(caminho);
                         totalDuplicatas++;
@@ -108,36 +90,31 @@ std::pair<size_t, size_t> exibir_duplicados(
             }
         }
     }
-    if (!encontrouDuplicados)
-    {
+    if (!encontrouDuplicados) {
         std::cout << "Nenhum arquivo duplicado encontrado." << std::endl;
     }
     return {tamanhoTotalEmBytes, totalDuplicatas};
 }
 
-int main()
-{
+int main() {
     setlocale(LC_ALL, ".UTF-8");
     std::cout << "Localizar duplicatas!" << std::endl;
     std::cout << "Informe pasta raiz: ";
     std::string pastaRaiz;
     std::getline(std::cin, pastaRaiz);
-    if (!std::filesystem::exists(pastaRaiz))
-    {
+    if (!std::filesystem::exists(pastaRaiz)) {
         std::cout << "Pasta raiz não existe." << std::endl;
         return -1;
     }
     // Cria um mapa para armazenar os arquivos e seus caminhos
-    std::unordered_map<std::string, std::vector<std::filesystem::path>> arquivos =
-        obter_arquivos_duplicados(pastaRaiz);
+    std::unordered_map<std::string, std::vector<std::filesystem::path> > arquivos =
+            obter_arquivos_duplicados(pastaRaiz);
     // Verifica os arquivos duplicados
-    const auto [tamanhoBytes, total] = exibir_duplicados(arquivos);
-    if (total)
-    {
+    if (const auto [tamanhoBytes, total] = exibir_duplicados(arquivos); total) {
         const auto tamanhoArquivo = tamanhoBytes / total;
         // Considerando que cada arquivo duplicado tem um original e um duplicado
         std::cout << "Tamanho em bytes que pode ser liberado: " << tamanhoBytes - tamanhoArquivo << " bytes" <<
-            std::endl;
+                std::endl;
     }
     return 0;
 }
