@@ -132,8 +132,12 @@ int main()
         obter_arquivos_duplicados(pastaRaiz);
     // Verifica os arquivos duplicados
     const auto [tamanhoBytes, total] = exibir_duplicados(arquivos);
-    const auto tamanhoArquivo = tamanhoBytes / total;
-    // Considerando que cada arquivo duplicado tem um original e um duplicado
-    std::cout << "Tamanho em bytes que pode ser liberado: " << tamanhoBytes - tamanhoArquivo << " bytes" << std::endl;
+    if (total)
+    {
+        const auto tamanhoArquivo = tamanhoBytes / total;
+        // Considerando que cada arquivo duplicado tem um original e um duplicado
+        std::cout << "Tamanho em bytes que pode ser liberado: " << tamanhoBytes - tamanhoArquivo << " bytes" <<
+            std::endl;
+    }
     return 0;
 }
