@@ -52,12 +52,18 @@ std::unordered_map<std::string, std::vector<std::filesystem::path> > obter_arqui
     const std::string &pastaRaiz) {
     std::unordered_map<std::string, std::vector<std::filesystem::path> > arquivos;
     // Percorre recursivamente o diretório raiz
-    for (const auto &entrada: std::filesystem::recursive_directory_iterator(
-             pastaRaiz, std::filesystem::directory_options::skip_permission_denied)) {
-        if (entrada.is_regular_file()) {
-            std::string nomeArquivo = entrada.path().filename().string();
-            arquivos[nomeArquivo].push_back(entrada.path());
+    try {
+        for (const auto &entrada: std::filesystem::recursive_directory_iterator(
+                 pastaRaiz, std::filesystem::directory_options::skip_permission_denied)) {
+            if (entrada.is_regular_file()) {
+                std::string nomeArquivo = entrada.path().filename().string();
+                arquivos[nomeArquivo].push_back(entrada.path());
+            } else if (entrada.is_symlink()) {
+                std::cerr << "Aviso: Ignorando link simbólico " << entrada.path().string() << std::endl;
+            }
         }
+    } catch (const std::filesystem::filesystem_error &e) {
+        std::cerr << "Erro ao percorrer o diretório " << pastaRaiz << ": " << e.what() << std::endl;
     }
     return arquivos;
 }
