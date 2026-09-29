@@ -14,6 +14,9 @@
 #include <vector>
 #include <cryptopp/sha.h>
 #include <cryptopp/hex.h>
+#if defined(_WIN32)
+#include <windows.h>
+#endif
 
 std::string calcularHash(const std::filesystem::path &caminho) {
     try {
@@ -103,7 +106,10 @@ std::pair<size_t, size_t> exibir_duplicados(
 }
 
 int main() {
-    setlocale(LC_ALL, ".UTF-8");
+#if defined(_WIN32)
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+#endif
     std::cout << "Localizar duplicatas!" << std::endl;
     std::cout << "Informe pasta raiz: ";
     std::string pastaRaiz;
