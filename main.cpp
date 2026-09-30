@@ -18,91 +18,93 @@
 #include <windows.h>
 #endif
 
-std::string calcularHash(const std::filesystem::path &caminho) {
-    try {
-        CryptoPP::SHA256 hash;
-        std::ifstream arquivo(caminho, std::ios::binary);
-        if (!arquivo.is_open()) {
-            std::cerr << "Não foi possível abrir o arquivo " << caminho.string() << " para leitura." << std::endl;
+namespace {
+    std::string calcularHash(const std::filesystem::path &caminho) {
+        try {
+            CryptoPP::SHA256 hash;
+            std::ifstream arquivo(caminho, std::ios::binary);
+            if (!arquivo.is_open()) {
+                std::cerr << "Não foi possível abrir o arquivo " << caminho.string() << " para leitura." << std::endl;
+                return "";
+            }
+            constexpr size_t bufferSize = 8192;
+            char buffer[bufferSize];
+            while (arquivo.read(buffer, bufferSize)) {
+                hash.Update(reinterpret_cast<const unsigned char *>(buffer), arquivo.gcount());
+            }
+            // Processa os bytes restantes
+            if (arquivo.gcount() > 0) {
+                hash.Update(reinterpret_cast<const unsigned char *>(buffer), arquivo.gcount());
+            }
+            arquivo.close();
+            // Finaliza o cálculo do hash
+            unsigned char digest[CryptoPP::SHA256::DIGESTSIZE];
+            hash.Final(digest);
+            // Converte o hash para uma string hexadecimal
+            std::string hashHex;
+            CryptoPP::HexEncoder encoder(new CryptoPP::StringSink(hashHex));
+            encoder.Put(digest, sizeof(digest));
+            encoder.MessageEnd();
+            return hashHex;
+        } catch (const std::exception &e) {
+            std::cerr << "Erro ao calcular o hash do arquivo " << caminho.string() << ": " << e.what() << std::endl;
             return "";
         }
-        constexpr size_t bufferSize = 8192;
-        char buffer[bufferSize];
-        while (arquivo.read(buffer, bufferSize)) {
-            hash.Update(reinterpret_cast<const unsigned char *>(buffer), arquivo.gcount());
-        }
-        // Processa os bytes restantes
-        if (arquivo.gcount() > 0) {
-            hash.Update(reinterpret_cast<const unsigned char *>(buffer), arquivo.gcount());
-        }
-        arquivo.close();
-        // Finaliza o cálculo do hash
-        unsigned char digest[CryptoPP::SHA256::DIGESTSIZE];
-        hash.Final(digest);
-        // Converte o hash para uma string hexadecimal
-        std::string hashHex;
-        CryptoPP::HexEncoder encoder(new CryptoPP::StringSink(hashHex));
-        encoder.Put(digest, sizeof(digest));
-        encoder.MessageEnd();
-        return hashHex;
-    } catch (const std::exception &e) {
-        std::cerr << "Erro ao calcular o hash do arquivo " << caminho.string() << ": " << e.what() << std::endl;
-        return "";
     }
-}
 
-std::unordered_map<std::string, std::vector<std::filesystem::path> > obter_arquivos_duplicados(
-    const std::string &pastaRaiz) {
-    std::unordered_map<std::string, std::vector<std::filesystem::path> > arquivos;
-    // Percorre recursivamente o diretório raiz
-    try {
-        for (const auto &entrada: std::filesystem::recursive_directory_iterator(
-                 pastaRaiz, std::filesystem::directory_options::skip_permission_denied)) {
-            if (entrada.is_regular_file()) {
-                std::string nomeArquivo = entrada.path().filename().string();
-                arquivos[nomeArquivo].push_back(entrada.path());
-            } else if (entrada.is_symlink()) {
-                std::cerr << "Aviso: Ignorando link simbólico " << entrada.path().string() << std::endl;
-            }
-        }
-    } catch (const std::filesystem::filesystem_error &e) {
-        std::cerr << "Erro ao percorrer o diretório " << pastaRaiz << ": " << e.what() << std::endl;
-    }
-    return arquivos;
-}
-
-std::pair<size_t, size_t> exibir_duplicados(
-    const std::unordered_map<std::string, std::vector<std::filesystem::path> > &arquivos) {
-    bool encontrouDuplicados = false;
-    size_t tamanhoTotalEmBytes = 0;
-    int totalDuplicatas = 0;
-    for (const auto &[nomeArquivo, caminhos]: arquivos) {
-        if (caminhos.size() > 1) {
-            // Verifica se o conteúdo dos arquivos é o mesmo usando hash
-            std::unordered_map<std::string, std::vector<std::filesystem::path> > hashes;
-            for (const auto &caminho: caminhos) {
-                if (std::string hash = calcularHash(caminho); !hash.empty()) {
-                    hashes[hash].push_back(caminho);
+    std::unordered_map<std::string, std::vector<std::filesystem::path> > obter_arquivos_duplicados(
+        const std::string &pastaRaiz) {
+        std::unordered_map<std::string, std::vector<std::filesystem::path> > arquivos;
+        // Percorre recursivamente o diretório raiz
+        try {
+            for (const auto &entrada: std::filesystem::recursive_directory_iterator(
+                     pastaRaiz, std::filesystem::directory_options::skip_permission_denied)) {
+                if (entrada.is_regular_file()) {
+                    std::string nomeArquivo = entrada.path().filename().string();
+                    arquivos[nomeArquivo].push_back(entrada.path());
+                } else if (entrada.is_symlink()) {
+                    std::cerr << "Aviso: Ignorando link simbólico " << entrada.path().string() << std::endl;
                 }
             }
-            // Imprime os arquivos duplicados
-            for (const auto &caminhosHash: hashes | std::views::values) {
-                if (caminhosHash.size() > 1) {
-                    std::cout << "Arquivos duplicados encontrados para o nome: " << nomeArquivo << std::endl;
-                    for (const auto &caminho: caminhosHash) {
-                        std::cout << " - " << caminho.string() << std::endl;
-                        tamanhoTotalEmBytes += std::filesystem::file_size(caminho);
-                        totalDuplicatas++;
+        } catch (const std::filesystem::filesystem_error &e) {
+            std::cerr << "Erro ao percorrer o diretório " << pastaRaiz << ": " << e.what() << std::endl;
+        }
+        return arquivos;
+    }
+
+    std::pair<size_t, size_t> exibir_duplicados(
+        const std::unordered_map<std::string, std::vector<std::filesystem::path> > &arquivos) {
+        bool encontrouDuplicados = false;
+        size_t tamanhoTotalEmBytes = 0;
+        int totalDuplicatas = 0;
+        for (const auto &[nomeArquivo, caminhos]: arquivos) {
+            if (caminhos.size() > 1) {
+                // Verifica se o conteúdo dos arquivos é o mesmo usando hash
+                std::unordered_map<std::string, std::vector<std::filesystem::path> > hashes;
+                for (const auto &caminho: caminhos) {
+                    if (std::string hash = calcularHash(caminho); !hash.empty()) {
+                        hashes[hash].push_back(caminho);
                     }
-                    encontrouDuplicados = true;
+                }
+                // Imprime os arquivos duplicados
+                for (const auto &caminhosHash: hashes | std::views::values) {
+                    if (caminhosHash.size() > 1) {
+                        std::cout << "Arquivos duplicados encontrados para o nome: " << nomeArquivo << std::endl;
+                        for (const auto &caminho: caminhosHash) {
+                            std::cout << " - " << caminho.string() << std::endl;
+                            tamanhoTotalEmBytes += std::filesystem::file_size(caminho);
+                            totalDuplicatas++;
+                        }
+                        encontrouDuplicados = true;
+                    }
                 }
             }
         }
+        if (!encontrouDuplicados) {
+            std::cout << "Nenhum arquivo duplicado encontrado." << std::endl;
+        }
+        return {tamanhoTotalEmBytes, totalDuplicatas};
     }
-    if (!encontrouDuplicados) {
-        std::cout << "Nenhum arquivo duplicado encontrado." << std::endl;
-    }
-    return {tamanhoTotalEmBytes, totalDuplicatas};
 }
 
 int main() {
