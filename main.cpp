@@ -19,6 +19,8 @@
 #endif
 
 namespace {
+    using ArquivosDuplicados = std::unordered_map<std::string, std::vector<std::filesystem::path> >;
+
     std::string calcularHash(const std::filesystem::path &caminho) {
         try {
             CryptoPP::SHA256 hash;
@@ -52,9 +54,9 @@ namespace {
         }
     }
 
-    std::unordered_map<std::string, std::vector<std::filesystem::path> > obter_arquivos_duplicados(
+    ArquivosDuplicados obter_arquivos_duplicados(
         const std::string &pastaRaiz) {
-        std::unordered_map<std::string, std::vector<std::filesystem::path> > arquivos;
+        ArquivosDuplicados arquivos;
         // Percorre recursivamente o diretório raiz
         try {
             for (const auto &entrada: std::filesystem::recursive_directory_iterator(
@@ -73,14 +75,14 @@ namespace {
     }
 
     std::pair<size_t, size_t> exibir_duplicados(
-        const std::unordered_map<std::string, std::vector<std::filesystem::path> > &arquivos) {
+        const ArquivosDuplicados &arquivos) {
         bool encontrouDuplicados = false;
         size_t tamanhoTotalEmBytes = 0;
         int totalDuplicatas = 0;
         for (const auto &[nomeArquivo, caminhos]: arquivos) {
             if (caminhos.size() > 1) {
                 // Verifica se o conteúdo dos arquivos é o mesmo usando hash
-                std::unordered_map<std::string, std::vector<std::filesystem::path> > hashes;
+                ArquivosDuplicados hashes;
                 for (const auto &caminho: caminhos) {
                     if (std::string hash = calcularHash(caminho); !hash.empty()) {
                         hashes[hash].push_back(caminho);
@@ -121,7 +123,7 @@ int main() {
         return -1;
     }
     // Cria um mapa para armazenar os arquivos e seus caminhos
-    std::unordered_map<std::string, std::vector<std::filesystem::path> > arquivos =
+    const ArquivosDuplicados arquivos =
             obter_arquivos_duplicados(pastaRaiz);
     // Verifica os arquivos duplicados
     if (const auto [tamanhoBytes, total] = exibir_duplicados(arquivos); total) {
