@@ -131,6 +131,7 @@ int main() {
         // Considerando que cada arquivo duplicado tem um original e um duplicado
         std::cout << "Tamanho em bytes que pode ser liberado: " << tamanhoBytes - tamanhoArquivo << " bytes" <<
                 std::endl;
+        std::cout << "Total de arquivos duplicados: " << total << std::endl;
     }
     return 0;
 }
